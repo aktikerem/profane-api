@@ -42,14 +42,12 @@ public class api {
 
             // Extract the part after the first "/"
             String input = requestURI.substring(1);
-            input = input.replaceAll("\\s+", "");
+            input = input.replaceAll("\\s+", "").toUpperCase();
             String response = "False";
-            for (int i = 0; i < list.size(); i++) {
-                if (input.toUpperCase().contains(list.get(i).toUpperCase())) {
-                    System.out.println("yep thats a bad word");
-                    response = "True";
-                    break;
-                }
+            
+            if (list.contains(input)) {
+                System.out.println("yep thats a bad word");
+                response = "True";
             }
 
             // Send a simple response back to the client
@@ -78,7 +76,7 @@ public class api {
                 String[] strings = content.split(",");
                 for (String str : strings) {
                     // Remove the quotes around each string
-                    list.add(str.trim().replaceAll("^\"|\"$", ""));
+                    list.add(str.trim().replaceAll("^\"|\"$", "").toUpperCase());
                 }
             }
         }
