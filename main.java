@@ -44,8 +44,8 @@ public class api {
             String input = requestURI.substring(1);
             input = input.replaceAll("\\s+", "").toUpperCase();
             String response = "False";
-            
-            if (list.contains(input)) {
+
+            if (list.stream().anyMatch(input::contains)) {
                 System.out.println("yep thats a bad word");
                 response = "True";
             }
