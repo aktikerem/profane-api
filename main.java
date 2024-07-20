@@ -4,6 +4,8 @@ import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpExchange;
 import java.net.InetSocketAddress;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 
 public class api {
 
@@ -14,11 +16,7 @@ public class api {
         // Print the contents of the ArrayList
         System.out.println("demo of profanityapi.com");
 
-        try {
-            JsonUtils.appendJsonToList("words.json", list);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        JsonUtils.appendJsonToList("words.json", list);
 
         HttpServer server = HttpServer.create(new InetSocketAddress(80), 0);
 
@@ -28,39 +26,70 @@ public class api {
         // Set the executor to null to use the default executor
         server.setExecutor(null);
 
+        // Add a shutdown hook to gracefully stop the server
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            server.stop(0);
+            System.out.println("Server stopped");
+        }));
+
         // Start the server
         server.start();
-        System.out.println("Server is listening on port 80");
+        System.out.println("Server is listening on port 8080");
     }
+
 
     static class MEventHandler implements HttpHandler {
 
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            // Add CORS headers
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+           // exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+           // exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type");
+
+            // Handle OPTIONS request
+            if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(204, -1); // No content for OPTIONS requests
+                return;
+            }
+
             // Get the request URI
             String requestURI = exchange.getRequestURI().toString();
 
             // Extract the part after the first "/"
             String input = requestURI.substring(1);
-            input = input.replaceAll("\\s+", "").toUpperCase();
+	    try{
+	      input = URLDecoder.decode(input, "UTF-8");
+	    }
+	    catch(UnsupportedEncodingException e){
+	      e.printStackTrace();
+	    }
+
+	    input = input.replace("@", "a")
+                         .replace("1", "i")
+                         .replace("3", "e")
+                         .replace("8", "b");
+
+
+	    input = input.replaceAll("\\s+", "").toUpperCase();
             String response = "False";
 
-            if (list.stream().anyMatch(input::contains)) {
-                System.out.println("yep thats a bad word");
+            if (list.stream().anyMatch(input::contains)) {    
+	       // System.out.println("yep thats a bad word");
                 response = "True";
             }
 
             // Send a simple response back to the client
             exchange.sendResponseHeaders(200, response.length());
-            OutputStream os = exchange.getResponseBody();
-            os.write(response.getBytes());
-            os.close();
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(response.getBytes());
+            }
         }
     }
 
     public static class JsonUtils {
 
-        public static void appendJsonToList(String filePath, ArrayList<String> list) throws IOException {
+        public static void appendJsonToList(String filePath, ArrayList<String> list) {
             try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
                 StringBuilder jsonContent = new StringBuilder();
                 String line;
@@ -78,6 +107,8 @@ public class api {
                     // Remove the quotes around each string
                     list.add(str.trim().replaceAll("^\"|\"$", "").toUpperCase());
                 }
+            } catch (IOException e) {
+                System.err.println("Error reading JSON file: " + e.getMessage());
             }
         }
     }
